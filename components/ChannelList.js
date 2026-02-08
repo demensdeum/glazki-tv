@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, View, Image } from 'react-native';
-import { List, Searchbar, Divider, Text, Surface, useTheme } from 'react-native-paper';
+import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
 
-export default function ChannelList({ channels, onSelectChannel }) {
+export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite }) {
     const theme = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -11,6 +11,8 @@ export default function ChannelList({ channels, onSelectChannel }) {
     const filteredChannels = channels.filter((item) =>
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const isFavorite = (channelName) => favorites.includes(channelName);
 
     const renderItem = ({ item }) => (
         <Surface style={currentStyles.itemContainer} elevation={1}>
@@ -29,6 +31,14 @@ export default function ChannelList({ channels, onSelectChannel }) {
                             <List.Icon {...props} icon="television-play" color={theme.colors.primary} />
                         )}
                     </View>
+                )}
+                right={(props) => (
+                    <IconButton
+                        {...props}
+                        icon={isFavorite(item.name) ? "heart" : "heart-outline"}
+                        iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
+                        onPress={() => onToggleFavorite(item.name)}
+                    />
                 )}
                 onPress={() => onSelectChannel(item)}
                 titleStyle={currentStyles.title}

@@ -6,12 +6,15 @@ import {
   MD3DarkTheme,
   Text,
   Appbar,
-  adaptNavigationTheme
+  BottomNavigation
 } from 'react-native-paper';
 import { parse } from 'iptv-playlist-parser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
+
+const FAVORITES_KEY = '@glazki_favorites';
 
 const lightTheme = {
   ...MD3LightTheme,
@@ -39,13 +42,45 @@ export default function App() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [channels, setChannels] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [index, setIndex] = useState(0);
+  const [routes] = useState([
+    { key: 'all', title: 'Channels', focusedIcon: 'television-classic', unfocusedIcon: 'television' },
+    { key: 'favorites', title: 'Favorites', focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
+  ]);
+
   useEffect(() => {
     fetchPlaylist();
+    loadFavorites();
   }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const storedFavorites = await AsyncStorage.getItem(FAVORITES_KEY);
+      if (storedFavorites) {
+        setFavorites(JSON.parse(storedFavorites));
+      }
+    } catch (err) {
+      console.error('Error loading favorites:', err);
+    }
+  };
+
+  const onToggleFavorite = async (channelName) => {
+    const newFavorites = favorites.includes(channelName)
+      ? favorites.filter((name) => name !== channelName)
+      : [...favorites, channelName];
+
+    setFavorites(newFavorites);
+    try {
+      await AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(newFavorites));
+    } catch (err) {
+      console.error('Error saving favorites:', err);
+    }
+  };
 
   const fetchPlaylist = async () => {
     try {
@@ -62,13 +97,41 @@ export default function App() {
     }
   };
 
+  const renderScene = ({ route }) => {
+    switch (route.key) {
+      case 'all':
+        return (
+          <ChannelList
+            channels={channels}
+            onSelectChannel={(channel) => setSelectedChannel(channel)}
+            favorites={favorites}
+            onToggleFavorite={onToggleFavorite}
+          />
+        );
+      case 'favorites':
+        return (
+          <ChannelList
+            channels={channels.filter(c => favorites.includes(c.name))}
+            onSelectChannel={(channel) => setSelectedChannel(channel)}
+            favorites={favorites}
+            onToggleFavorite={onToggleFavorite}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   const currentStyles = styles(theme);
 
   return (
     <PaperProvider theme={theme}>
       <SafeAreaView style={currentStyles.container}>
-        <Appbar.Header>
-          <Appbar.Content title="Glazki TV" subtitle="Global IPTV Player" />
+        <Appbar.Header elevation={0}>
+          <Appbar.Content
+            title="Glazki TV"
+            subtitle={routes[index].title}
+          />
         </Appbar.Header>
 
         <View style={currentStyles.content}>
@@ -82,9 +145,11 @@ export default function App() {
               <Text style={currentStyles.errorText}>{error}</Text>
             </View>
           ) : (
-            <ChannelList
-              channels={channels}
-              onSelectChannel={(channel) => setSelectedChannel(channel)}
+            <BottomNavigation
+              navigationState={{ index, routes }}
+              onIndexChange={setIndex}
+              renderScene={renderScene}
+              barStyle={{ backgroundColor: theme.colors.elevation.level2 }}
             />
           )}
         </View>
