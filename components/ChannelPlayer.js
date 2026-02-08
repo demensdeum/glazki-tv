@@ -4,7 +4,7 @@ import { useVideoPlayer, VideoView } from 'expo-video';
 import { IconButton } from 'react-native-paper';
 
 export default function ChannelPlayer({ url, onClose }) {
-  const [showControls, setShowControls] = useState(true);
+  const [showControls, setShowControls] = useState(false);
   const hideTimer = useRef(null);
   const player = useVideoPlayer(url, (player) => {
     player.loop = false;
@@ -24,7 +24,7 @@ export default function ChannelPlayer({ url, onClose }) {
     if (player) {
       player.play();
     }
-    startHideTimer();
+    // Remove auto-showing on mount to honor the "appear on first tap" requirement
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
