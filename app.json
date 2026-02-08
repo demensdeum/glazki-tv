@@ -28,6 +28,9 @@
     "plugins": [
       "expo-video",
       "expo-localization"
-    ]
+    ],
+    "experiments": {
+      "baseUrl": "/glazki-tv"
+    }
   }
 }
