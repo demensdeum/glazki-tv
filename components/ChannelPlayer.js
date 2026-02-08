@@ -1,36 +1,64 @@
-import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { IconButton } from 'react-native-paper';
 
 export default function ChannelPlayer({ url, onClose }) {
+  const [showControls, setShowControls] = useState(true);
+  const hideTimer = useRef(null);
   const player = useVideoPlayer(url, (player) => {
     player.loop = false;
     player.play();
   });
 
-  React.useEffect(() => {
+  const startHideTimer = () => {
+    if (hideTimer.current) {
+      clearTimeout(hideTimer.current);
+    }
+    hideTimer.current = setTimeout(() => {
+      setShowControls(false);
+    }, 3000);
+  };
+
+  useEffect(() => {
     if (player) {
       player.play();
     }
+    startHideTimer();
+    return () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    };
   }, [player]);
 
+  const handleInteraction = () => {
+    setShowControls(true);
+    startHideTimer();
+  };
+
   return (
-    <View style={styles.container}>
-      <VideoView
-        style={styles.video}
-        player={player}
-        allowsFullscreen
-        allowsPictureInPicture
-      />
-      <IconButton
-        icon="close"
-        size={30}
-        color="white"
-        style={styles.closeButton}
-        onPress={onClose}
-      />
-    </View>
+    <TouchableWithoutFeedback onPress={handleInteraction}>
+      <View
+        style={styles.container}
+        // @ts-ignore - onPointerMove is supported on web in the same way as onMouseMove
+        onPointerMove={handleInteraction}
+      >
+        <VideoView
+          style={styles.video}
+          player={player}
+          allowsFullscreen
+          allowsPictureInPicture
+        />
+        {showControls && (
+          <IconButton
+            icon="close"
+            size={30}
+            color="white"
+            style={styles.closeButton}
+            onPress={onClose}
+          />
+        )}
+      </View>
+    </TouchableWithoutFeedback>
   );
 }
 
