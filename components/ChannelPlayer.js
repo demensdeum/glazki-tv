@@ -9,6 +9,12 @@ export default function ChannelPlayer({ url, onClose }) {
     player.play();
   });
 
+  React.useEffect(() => {
+    if (player) {
+      player.play();
+    }
+  }, [player]);
+
   return (
     <View style={styles.container}>
       <VideoView
