@@ -1,23 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, SafeAreaView, ActivityIndicator } from 'react-native';
-import { Provider as PaperProvider, DefaultTheme, Text, Appbar } from 'react-native-paper';
+import { StyleSheet, View, SafeAreaView, ActivityIndicator, useColorScheme } from 'react-native';
+import {
+  Provider as PaperProvider,
+  MD3LightTheme,
+  MD3DarkTheme,
+  Text,
+  Appbar,
+  adaptNavigationTheme
+} from 'react-native-paper';
 import { parse } from 'iptv-playlist-parser';
 
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
 
-const theme = {
-  ...DefaultTheme,
+const lightTheme = {
+  ...MD3LightTheme,
   colors: {
-    ...DefaultTheme.colors,
+    ...MD3LightTheme.colors,
     primary: '#6200ee',
-    accent: '#03dac4',
+    secondary: '#03dac4',
+  },
+};
+
+const darkTheme = {
+  ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    primary: '#bb86fc',
+    secondary: '#03dac4',
+    background: '#121212',
+    surface: '#1e1e1e',
   },
 };
 
 const PLAYLIST_URL = 'https://iptv-org.github.io/iptv/index.m3u';
 
 export default function App() {
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -42,22 +62,24 @@ export default function App() {
     }
   };
 
+  const currentStyles = styles(theme);
+
   return (
     <PaperProvider theme={theme}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={currentStyles.container}>
         <Appbar.Header>
           <Appbar.Content title="Glazki TV" subtitle="Global IPTV Player" />
         </Appbar.Header>
 
-        <View style={styles.content}>
+        <View style={currentStyles.content}>
           {loading ? (
-            <View style={styles.center}>
+            <View style={currentStyles.center}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={styles.loadingText}>Loading channels...</Text>
+              <Text style={currentStyles.loadingText}>Loading channels...</Text>
             </View>
           ) : error ? (
-            <View style={styles.center}>
-              <Text style={styles.errorText}>{error}</Text>
+            <View style={currentStyles.center}>
+              <Text style={currentStyles.errorText}>{error}</Text>
             </View>
           ) : (
             <ChannelList
@@ -78,10 +100,10 @@ export default function App() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
@@ -95,9 +117,10 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 10,
     fontSize: 16,
+    color: theme.colors.onSurface,
   },
   errorText: {
-    color: 'red',
+    color: theme.colors.error,
     fontSize: 16,
     textAlign: 'center',
   },

@@ -13,16 +13,16 @@ export default function ChannelList({ channels, onSelectChannel }) {
     );
 
     const renderItem = ({ item }) => (
-        <Surface style={styles.itemContainer} elevation={1}>
+        <Surface style={currentStyles.itemContainer} elevation={1}>
             <List.Item
                 title={item.name}
                 description={item.group?.title || 'Unknown Category'}
                 left={(props) => (
-                    <View style={styles.logoContainer}>
+                    <View style={currentStyles.logoContainer}>
                         {item.tvg?.logo ? (
                             <Image
                                 source={{ uri: item.tvg.logo }}
-                                style={styles.logo}
+                                style={currentStyles.logo}
                                 resizeMode="contain"
                             />
                         ) : (
@@ -31,26 +31,28 @@ export default function ChannelList({ channels, onSelectChannel }) {
                     </View>
                 )}
                 onPress={() => onSelectChannel(item)}
-                titleStyle={styles.title}
-                descriptionStyle={styles.description}
+                titleStyle={currentStyles.title}
+                descriptionStyle={currentStyles.description}
             />
         </Surface>
     );
 
+    const currentStyles = styles(theme);
+
     return (
-        <View style={styles.container}>
+        <View style={currentStyles.container}>
             <Searchbar
                 placeholder="Search channels..."
                 onChangeText={onChangeSearch}
                 value={searchQuery}
-                style={styles.searchBar}
+                style={currentStyles.searchBar}
                 iconColor={theme.colors.primary}
             />
             <FlatList
                 data={filteredChannels}
                 keyExtractor={(item, index) => `${item.name}-${index}`}
                 renderItem={renderItem}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={currentStyles.listContent}
                 initialNumToRender={20}
                 maxToRenderPerBatch={20}
                 windowSize={10}
@@ -59,22 +61,22 @@ export default function ChannelList({ channels, onSelectChannel }) {
     );
 }
 
-const styles = StyleSheet.create({
+const styles = (theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: theme.colors.background,
     },
     searchBar: {
         margin: 12,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.surface,
         elevation: 2,
     },
     itemContainer: {
         marginHorizontal: 12,
         marginVertical: 6,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.surface,
         overflow: 'hidden',
     },
     logoContainer: {
@@ -92,10 +94,10 @@ const styles = StyleSheet.create({
     title: {
         fontWeight: '700',
         fontSize: 16,
-        color: '#333',
+        color: theme.colors.onSurface,
     },
     description: {
-        color: '#777',
+        color: theme.colors.onSurfaceVariant,
         fontSize: 13,
     },
     listContent: {

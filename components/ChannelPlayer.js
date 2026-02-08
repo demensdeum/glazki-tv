@@ -52,7 +52,7 @@ export default function ChannelPlayer({ url, onClose }) {
           <IconButton
             icon="close"
             size={30}
-            color="white"
+            iconColor="white"
             style={styles.closeButton}
             onPress={onClose}
           />
