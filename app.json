@@ -30,7 +30,7 @@
       "expo-localization"
     ],
     "experiments": {
-      "baseUrl": "/glazki-tv"
+      "baseUrl": "/software/glazki-tv"
     }
   }
 }
