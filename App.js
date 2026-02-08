@@ -69,13 +69,30 @@ export default function App() {
 
   const handleDeepLink = (initialUrl) => {
     if (!initialUrl) return;
-    const { queryParams } = Linking.parse(initialUrl);
-    if (queryParams?.channel) {
-      const channelName = decodeURIComponent(queryParams.channel);
-      const channel = channels.find(c => c.name === channelName);
-      if (channel) {
-        setSelectedChannel(channel);
+    try {
+      const { queryParams } = Linking.parse(initialUrl);
+      if (queryParams?.channel) {
+        let channelName = queryParams.channel;
+        // Try matching raw, then decoded, then double-decoded just in case
+        let channel = channels.find(c => c.name === channelName);
+        if (!channel) {
+          channelName = decodeURIComponent(channelName);
+          channel = channels.find(c => c.name === channelName);
+        }
+        if (!channel) {
+          channelName = decodeURIComponent(channelName);
+          channel = channels.find(c => c.name === channelName);
+        }
+
+        if (channel) {
+          console.log('Deep link matched:', channel.name);
+          setSelectedChannel(channel);
+        } else {
+          console.warn('Deep link: Channel not found', channelName);
+        }
       }
+    } catch (err) {
+      console.error('Error handling deep link:', err);
     }
   };
 
@@ -177,7 +194,8 @@ export default function App() {
 
         {selectedChannel && (
           <ChannelPlayer
-            url={selectedChannel.url}
+            key={selectedChannel.name}
+            channel={selectedChannel}
             onClose={() => setSelectedChannel(null)}
           />
         )}

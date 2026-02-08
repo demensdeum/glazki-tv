@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FlatList, StyleSheet, View, Image, Share } from 'react-native';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
 import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 import i18n from '../utils/i18n';
 
 export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite }) {
@@ -18,11 +19,21 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
 
     const onShare = async (channel) => {
         try {
-            const shareUrl = Linking.createURL('', {
+            const baseUrl = Constants.expoConfig?.experiments?.baseUrl || '';
+            let shareUrl = Linking.createURL('', {
                 queryParams: { channel: channel.name },
             });
+
+            // On web, if we're deploying to a subfolder, we want the share link to reflect that
+            // even if generated in an environment where the subfolder isn't in the path yet.
+            if (baseUrl && !shareUrl.includes(baseUrl)) {
+                const urlObj = new URL(shareUrl);
+                urlObj.pathname = baseUrl + (urlObj.pathname === '/' ? '' : urlObj.pathname);
+                shareUrl = urlObj.toString();
+            }
+
             await Share.share({
-                message: `${i18n.shareMessage}${channel.name}: ${shareUrl}`,
+                message: shareUrl,
             });
         } catch (error) {
             console.error('Error sharing:', error.message);
