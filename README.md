@@ -1,11 +1,43 @@
-# Sample Snack app
+# Glazki TV - Internet TV Player
 
-Open the `App.js` file to start writing some code. You can preview the changes directly on your phone or tablet by scanning the **QR code** or use the iOS or Android emulators. When you're done, click **Save** and share the link!
+A modern, high-performance Internet TV player built with **React Native** and **Expo**.
 
-When you're ready to see everything that Expo provides (or if you want to use your own editor) you can **Download** your project and use it with [expo cli](https://docs.expo.dev/get-started/installation/#expo-cli)).
+## Features
 
-All projects created in Snack are publicly available, so you can easily share the link to this project via link, or embed it on a web page with the `<>` button.
+- 📺 **Channel Browsing**: Browse thousands of channels categorized by group.
+- 🔍 **Search**: Find channels quickly by name.
+- ❤️ **Favorites**: Save your favorite channels for quick access (persisted locally).
+- 🔗 **Deep Linking & Sharing**: Share direct links to channels that open automatically.
+    - Example: `/?channel=Russia 1` works on web!
+- 🌓 **Theme Support**: Automatically adapts to system light/dark mode.
+- 🌐 **Web Support**: Fully functional on the web with URL synchronization.
+    - Interactive preview mode prevents autoplay issues.
 
-If you're having problems, you can tweet to us [@expo](https://twitter.com/expo) or ask in our [forums](https://forums.expo.dev/c/expo-dev-tools/61) or [Discord](https://chat.expo.dev/).
+## Tech Stack
 
-Snack is Open Source. You can find the code on the [GitHub repo](https://github.com/expo/snack).
+- **Framework**: React Native + Expo
+- **Video Player**: `expo-video` (replaces deprecated `expo-av`)
+- **UI Toolkit**: `react-native-paper`
+- **Playlist Parser**: `iptv-playlist-parser`
+- **Routing**: Custom tab navigation + `expo-linking`
+
+## Getting Started
+
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Run on Web**:
+   ```bash
+   npm run web
+   ```
+   Open [http://localhost:8081](http://localhost:8081) to view it in the browser.
+
+3. **Run on Mobile**:
+   ```bash
+   npm run android
+   # or
+   npm run ios
+   ```
+
