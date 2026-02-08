@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, View, Image } from 'react-native';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
+import i18n from '../utils/i18n';
 
 export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite }) {
     const theme = useTheme();
@@ -18,7 +19,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
         <Surface style={currentStyles.itemContainer} elevation={1}>
             <List.Item
                 title={item.name}
-                description={item.group?.title || 'Unknown Category'}
+                description={item.group?.title || i18n.unknownCategory}
                 left={(props) => (
                     <View style={currentStyles.logoContainer}>
                         {item.tvg?.logo ? (
@@ -52,7 +53,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
     return (
         <View style={currentStyles.container}>
             <Searchbar
-                placeholder="Search channels..."
+                placeholder={i18n.searchPlaceholder}
                 onChangeText={onChangeSearch}
                 value={searchQuery}
                 style={currentStyles.searchBar}

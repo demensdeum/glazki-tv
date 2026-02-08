@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
+import i18n from './utils/i18n';
 
 const FAVORITES_KEY = '@glazki_favorites';
 
@@ -49,8 +50,8 @@ export default function App() {
 
   const [index, setIndex] = useState(0);
   const [routes] = useState([
-    { key: 'all', title: 'Channels', focusedIcon: 'television-classic', unfocusedIcon: 'television' },
-    { key: 'favorites', title: 'Favorites', focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
+    { key: 'all', title: i18n.channels, focusedIcon: 'television-classic', unfocusedIcon: 'television' },
+    { key: 'favorites', title: i18n.favorites, focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
   ]);
 
   useEffect(() => {
@@ -92,7 +93,7 @@ export default function App() {
       setLoading(false);
     } catch (err) {
       console.error('Error fetching playlist:', err);
-      setError('Failed to load channels. Please try again later.');
+      setError(i18n.errorLoading);
       setLoading(false);
     }
   };
@@ -129,7 +130,7 @@ export default function App() {
       <SafeAreaView style={currentStyles.container}>
         <Appbar.Header elevation={0}>
           <Appbar.Content
-            title="Glazki TV"
+            title={i18n.appName}
             subtitle={routes[index].title}
           />
         </Appbar.Header>
@@ -138,7 +139,7 @@ export default function App() {
           {loading ? (
             <View style={currentStyles.center}>
               <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={currentStyles.loadingText}>Loading channels...</Text>
+              <Text style={currentStyles.loadingText}>{i18n.loadingChannels}</Text>
             </View>
           ) : error ? (
             <View style={currentStyles.center}>
