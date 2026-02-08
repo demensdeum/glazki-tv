@@ -10,6 +10,7 @@ import {
 } from 'react-native-paper';
 import { parse } from 'iptv-playlist-parser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
@@ -49,6 +50,7 @@ export default function App() {
   const [error, setError] = useState(null);
 
   const [index, setIndex] = useState(0);
+  const url = Linking.useURL();
   const [routes] = useState([
     { key: 'all', title: i18n.channels, focusedIcon: 'television-classic', unfocusedIcon: 'television' },
     { key: 'favorites', title: i18n.favorites, focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
@@ -58,6 +60,24 @@ export default function App() {
     fetchPlaylist();
     loadFavorites();
   }, []);
+
+  useEffect(() => {
+    if (channels.length > 0) {
+      handleDeepLink(url);
+    }
+  }, [url, channels]);
+
+  const handleDeepLink = (initialUrl) => {
+    if (!initialUrl) return;
+    const { queryParams } = Linking.parse(initialUrl);
+    if (queryParams?.channel) {
+      const channelName = decodeURIComponent(queryParams.channel);
+      const channel = channels.find(c => c.name === channelName);
+      if (channel) {
+        setSelectedChannel(channel);
+      }
+    }
+  };
 
   const loadFavorites = async () => {
     try {

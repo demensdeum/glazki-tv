@@ -10,6 +10,8 @@ const translations = {
         errorLoading: 'Failed to load channels. Please try again later.',
         unknownCategory: 'Unknown Category',
         globalSubtitle: 'Global IPTV Player',
+        shareMessage: 'Check out this TV channel: ',
+        play: 'Play',
     },
     ru: {
         appName: 'Глазки ТВ',
@@ -20,6 +22,8 @@ const translations = {
         errorLoading: 'Не удалось загрузить каналы. Пожалуйста, попробуйте позже.',
         unknownCategory: 'Неизвестная категория',
         globalSubtitle: 'Глобальный IPTV плеер',
+        shareMessage: 'Посмотри этот телеканал: ',
+        play: 'Играть',
     },
 };
 

@@ -1,15 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Dimensions, Pressable, Platform } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { IconButton } from 'react-native-paper';
+import { IconButton, Button } from 'react-native-paper';
+import i18n from '../utils/i18n';
 
 export default function ChannelPlayer({ url, onClose }) {
   const [showControls, setShowControls] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const hideTimer = useRef(null);
   const player = useVideoPlayer(url, (player) => {
     player.loop = false;
     player.play();
   });
+
+  useEffect(() => {
+    const subscription = player.addListener('playingChange', ({ isPlaying }) => {
+      setIsPlaying(isPlaying);
+    });
+    return () => subscription.remove();
+  }, [player]);
 
   const startHideTimer = () => {
     if (hideTimer.current) {
@@ -20,26 +29,19 @@ export default function ChannelPlayer({ url, onClose }) {
     }, 3000);
   };
 
-  useEffect(() => {
-    if (player) {
-      player.play();
-    }
-    // Remove auto-showing on mount to honor the "appear on first tap" requirement
-    return () => {
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
-  }, [player]);
-
   const handleInteraction = () => {
     setShowControls(true);
+    if (player && !isPlaying) {
+      player.play();
+    }
     startHideTimer();
   };
 
   return (
-    <TouchableWithoutFeedback onPress={handleInteraction}>
+    <Pressable onPress={handleInteraction} style={styles.container}>
       <View
-        style={styles.container}
-        // @ts-ignore - onPointerMove is supported on web in the same way as onMouseMove
+        style={styles.fullSize}
+        // @ts-ignore - onPointerMove is supported on web
         onPointerMove={handleInteraction}
       >
         <VideoView
@@ -48,6 +50,21 @@ export default function ChannelPlayer({ url, onClose }) {
           allowsFullscreen
           allowsPictureInPicture
         />
+
+        {!isPlaying && (
+          <View style={styles.playOverlay}>
+            <Button
+              mode="contained"
+              icon="play"
+              onPress={handleInteraction}
+              contentStyle={styles.playButtonContent}
+              labelStyle={styles.playButtonLabel}
+            >
+              {i18n.play}
+            </Button>
+          </View>
+        )}
+
         {showControls && (
           <IconButton
             icon="close"
@@ -58,7 +75,7 @@ export default function ChannelPlayer({ url, onClose }) {
           />
         )}
       </View>
-    </TouchableWithoutFeedback>
+    </Pressable>
   );
 }
 
@@ -72,10 +89,29 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  fullSize: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   closeButton: {
     position: 'absolute',
     top: 40,
     right: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  playButtonContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  playButtonLabel: {
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 });

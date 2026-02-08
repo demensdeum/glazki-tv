@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, View, Image } from 'react-native';
+import { FlatList, StyleSheet, View, Image, Share } from 'react-native';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
+import * as Linking from 'expo-linking';
 import i18n from '../utils/i18n';
 
 export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite }) {
@@ -14,6 +15,19 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
     );
 
     const isFavorite = (channelName) => favorites.includes(channelName);
+
+    const onShare = async (channel) => {
+        try {
+            const shareUrl = Linking.createURL('', {
+                queryParams: { channel: channel.name },
+            });
+            await Share.share({
+                message: `${i18n.shareMessage}${channel.name}: ${shareUrl}`,
+            });
+        } catch (error) {
+            console.error('Error sharing:', error.message);
+        }
+    };
 
     const renderItem = ({ item }) => (
         <Surface style={currentStyles.itemContainer} elevation={1}>
@@ -34,12 +48,20 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                     </View>
                 )}
                 right={(props) => (
-                    <IconButton
-                        {...props}
-                        icon={isFavorite(item.name) ? "heart" : "heart-outline"}
-                        iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
-                        onPress={() => onToggleFavorite(item.name)}
-                    />
+                    <View style={styles.rightActions}>
+                        <IconButton
+                            {...props}
+                            icon="share-variant"
+                            iconColor={theme.colors.outline}
+                            onPress={() => onShare(item)}
+                        />
+                        <IconButton
+                            {...props}
+                            icon={isFavorite(item.name) ? "heart" : "heart-outline"}
+                            iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
+                            onPress={() => onToggleFavorite(item.name)}
+                        />
+                    </View>
                 )}
                 onPress={() => onSelectChannel(item)}
                 titleStyle={currentStyles.title}
@@ -113,5 +135,9 @@ const styles = (theme) => StyleSheet.create({
     },
     listContent: {
         paddingBottom: 24,
+    },
+    rightActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
 });
