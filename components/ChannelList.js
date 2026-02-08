@@ -41,7 +41,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
     };
 
     const renderItem = ({ item }) => (
-        <Surface style={currentStyles.itemContainer} elevation={1}>
+        <Surface style={currentStyles.itemContainer}>
             <List.Item
                 title={item.name}
                 description={item.group?.title || i18n.unknownCategory}
@@ -114,7 +114,8 @@ const styles = (theme) => StyleSheet.create({
         margin: 12,
         borderRadius: 12,
         backgroundColor: theme.colors.surface,
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: theme.colors.outlineVariant,
     },
     itemContainer: {
         marginHorizontal: 12,
@@ -122,6 +123,8 @@ const styles = (theme) => StyleSheet.create({
         borderRadius: 12,
         backgroundColor: theme.colors.surface,
         overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: theme.colors.outlineVariant,
     },
     logoContainer: {
         width: 50,

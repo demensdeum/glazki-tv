@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, SafeAreaView, ActivityIndicator, useColorScheme } from 'react-native';
+import { StyleSheet, View, SafeAreaView, ActivityIndicator, useColorScheme, Platform } from 'react-native';
 import {
   Provider as PaperProvider,
   MD3LightTheme,
@@ -11,6 +11,7 @@ import {
 import { parse } from 'iptv-playlist-parser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
+import Constants from 'expo-constants';
 
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
@@ -67,21 +68,103 @@ export default function App() {
     }
   }, [url, channels]);
 
+  // Update browser URL on web when channel is selected/deselected
+  useEffect(() => {
+    if (channels.length === 0) return;
+
+    if (Platform.OS === 'web') {
+      const baseUrl = Constants.expoConfig?.experiments?.baseUrl || '';
+      let newUrl = window.location.origin + baseUrl;
+
+      if (selectedChannel) {
+        const queryParams = new URLSearchParams(window.location.search);
+        // User requested to use name
+        queryParams.set('channel', selectedChannel.name);
+        newUrl += `/?${queryParams.toString()}`;
+      } else {
+        // If we are clearing the channel, we might want to preserve other params or just clear 'channel'
+        const queryParams = new URLSearchParams(window.location.search);
+        queryParams.delete('channel');
+        const queryString = queryParams.toString();
+        if (queryString) {
+          newUrl += `/?${queryString}`;
+        }
+      }
+
+      if (window.location.href !== newUrl) {
+        window.history.pushState({ path: newUrl }, '', newUrl);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedChannel]);
+
   const handleDeepLink = (initialUrl) => {
     if (!initialUrl) return;
     try {
       const { queryParams } = Linking.parse(initialUrl);
       if (queryParams?.channel) {
         let channelName = queryParams.channel;
-        // Try matching raw, then decoded, then double-decoded just in case
-        let channel = channels.find(c => c.name === channelName);
+        console.log('[DeepLink] Received params:', queryParams);
+        console.log('[DeepLink] Raw channel name:', channelName);
+
+        // Helper to find channel with normalization
+        const findChannel = (nameToFind) => {
+          if (!nameToFind) return null;
+          const target = nameToFind.trim();
+          return channels.find(c => c.name.trim() === target);
+        };
+
+        let channel = findChannel(channelName);
+
         if (!channel) {
-          channelName = decodeURIComponent(channelName);
-          channel = channels.find(c => c.name === channelName);
+          try {
+            const decoded = decodeURIComponent(channelName);
+            console.log('[DeepLink] Trying decoded:', decoded);
+            channel = findChannel(decoded);
+          } catch (e) { console.warn('Decode failed', e); }
         }
+
         if (!channel) {
-          channelName = decodeURIComponent(channelName);
-          channel = channels.find(c => c.name === channelName);
+          try {
+            // In case it was double encoded (e.g. from browser address bar copying sometimes)
+            const doubleDecoded = decodeURIComponent(decodeURIComponent(channelName));
+            console.log('[DeepLink] Trying double decoded:', doubleDecoded);
+            channel = findChannel(doubleDecoded);
+          } catch (e) { console.warn('Double decode failed', e); }
+        }
+
+        if (!channel) {
+          // Check for + as space (common in query params)
+          console.log('[DeepLink] Trying replacing + with space');
+          const spaceReplaced = channelName.replace(/\+/g, ' ');
+          channel = findChannel(spaceReplaced);
+
+          if (!channel) {
+            const decodedSpaceResult = decodeURIComponent(spaceReplaced);
+            channel = findChannel(decodedSpaceResult);
+          }
+        }
+
+        if (!channel) {
+          // Case insensitive fallback
+          console.log('[DeepLink] Trying case insensitive match');
+          const lowerTarget = decodeURIComponent(channelName).toLowerCase().replace(/\+/g, ' ').trim();
+          channel = channels.find(c => c.name.toLowerCase().trim() === lowerTarget);
+        }
+
+        if (!channel) {
+          // Super aggressive search: normalize both to alphanumeric only
+          console.log('[DeepLink] Trying super normalized match');
+          // keep only alphanumeric, lowercase
+          const normalize = (str) => str ? str.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+          const targetNormalized = normalize(decodeURIComponent(channelName));
+
+          channel = channels.find(c => normalize(c.name) === targetNormalized);
+          if (!channel && channelName.includes('+')) {
+            // Try replacing + with space before normalizing (though replace removes it anyway, but decode might care)
+            const targetNormalized2 = normalize(decodeURIComponent(channelName.replace(/\+/g, ' ')));
+            channel = channels.find(c => normalize(c.name) === targetNormalized2);
+          }
         }
 
         if (channel) {
