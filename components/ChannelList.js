@@ -48,7 +48,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                     </View>
                 )}
                 right={(props) => (
-                    <View style={styles.rightActions}>
+                    <View style={currentStyles.rightActions}>
                         <IconButton
                             {...props}
                             icon="share-variant"
