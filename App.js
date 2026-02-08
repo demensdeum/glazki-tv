@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, SafeAreaView, ActivityIndicator, useColorScheme, Platform } from 'react-native';
+import { StyleSheet, View, SafeAreaView, ActivityIndicator, useColorScheme, Platform, FlatList, BackHandler } from 'react-native';
 import {
   Provider as PaperProvider,
   MD3LightTheme,
   MD3DarkTheme,
   Text,
   Appbar,
-  BottomNavigation
+  BottomNavigation,
+  List
 } from 'react-native-paper';
 import { parse } from 'iptv-playlist-parser';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,6 +16,7 @@ import Constants from 'expo-constants';
 
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
+import CountryListView from './components/CountryListView';
 import i18n from './utils/i18n';
 
 const FAVORITES_KEY = '@glazki_favorites';
@@ -40,13 +42,16 @@ const darkTheme = {
 };
 
 const PLAYLIST_URL = 'https://iptv-org.github.io/iptv/index.m3u';
+const PLAYLIST_COUNTRY_URL = 'https://iptv-org.github.io/iptv/index.country.m3u';
 
 export default function App() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
   const [channels, setChannels] = useState([]);
+  const [countryChannels, setCountryChannels] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -54,16 +59,20 @@ export default function App() {
   const url = Linking.useURL();
   const [routes] = useState([
     { key: 'all', title: i18n.channels, focusedIcon: 'television-classic', unfocusedIcon: 'television' },
+    { key: 'countries', title: i18n.countries || 'Countries', focusedIcon: 'earth', unfocusedIcon: 'earth' },
     { key: 'favorites', title: i18n.favorites, focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
   ]);
 
   useEffect(() => {
     fetchPlaylist();
+    fetchCountryPlaylist();
     loadFavorites();
   }, []);
 
   useEffect(() => {
     if (channels.length > 0) {
+      console.log('First channel structure:', JSON.stringify(channels[0], null, 2));
+      console.log('First channel keys:', Object.keys(channels[0]));
       handleDeepLink(url);
     }
   }, [url, channels]);
@@ -97,6 +106,19 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChannel]);
+
+  useEffect(() => {
+    const onBackPress = () => {
+      if (selectedCountry) {
+        setSelectedCountry(null);
+        return true;
+      }
+      return false;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+  }, [selectedCountry]);
 
   const handleDeepLink = (initialUrl) => {
     if (!initialUrl) return;
@@ -218,6 +240,17 @@ export default function App() {
     }
   };
 
+  const fetchCountryPlaylist = async () => {
+    try {
+      const response = await fetch(PLAYLIST_COUNTRY_URL);
+      const data = await response.text();
+      const result = parse(data);
+      setCountryChannels(result.items);
+    } catch (err) {
+      console.error('Error fetching country playlist:', err);
+    }
+  };
+
   const renderScene = ({ route }) => {
     switch (route.key) {
       case 'all':
@@ -229,6 +262,42 @@ export default function App() {
             onToggleFavorite={onToggleFavorite}
           />
         );
+      case 'countries':
+        if (selectedCountry) {
+          // Detail View: Channels for selected country
+          const filtered = countryChannels.filter(c => (c.group?.title || i18n.unknownCategory) === selectedCountry);
+          return (
+            <View style={{ flex: 1 }}>
+              <Appbar.Header elevation={0} style={{ backgroundColor: theme.colors.background }}>
+                <Appbar.BackAction onPress={() => setSelectedCountry(null)} />
+                <Appbar.Content title={selectedCountry} />
+              </Appbar.Header>
+              <ChannelList
+                channels={filtered}
+                onSelectChannel={(channel) => setSelectedChannel(channel)}
+                favorites={favorites}
+                onToggleFavorite={onToggleFavorite}
+              />
+            </View>
+          );
+        } else {
+          // Master View: List of countries
+          // Extract unique countries
+          const countries = Array.from(new Set(countryChannels.map(c => c.group?.title || i18n.unknownCategory))).sort();
+          // We can reuse ChannelList if we map countries to channel-like objects, or build a simple list.
+          // Let's build a simple list using ChannelList structure but with folder icons?
+          // Or just a FlatList here?
+          // Better to reuse ChannelList for consistency but "hack" the data? 
+          // Or just use a simple ScrollView/FlatList with List.Item.
+
+          return (
+            <CountryListView
+              countries={countries}
+              onSelect={(country) => setSelectedCountry(country)}
+              theme={theme}
+            />
+          );
+        }
       case 'favorites':
         return (
           <ChannelList

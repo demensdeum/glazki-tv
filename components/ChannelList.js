@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, View, Image, Share } from 'react-native';
+import { FlatList, SectionList, StyleSheet, View, Image, Share } from 'react-native';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -81,6 +81,28 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
         </Surface>
     );
 
+    const sections = React.useMemo(() => {
+        const groups = {};
+        filteredChannels.forEach(channel => {
+            const groupName = channel.group?.title || i18n.unknownCategory;
+            if (!groups[groupName]) {
+                groups[groupName] = [];
+            }
+            groups[groupName].push(channel);
+        });
+
+        return Object.keys(groups).sort().map(groupName => ({
+            title: groupName,
+            data: groups[groupName],
+        }));
+    }, [filteredChannels]);
+
+    const renderSectionHeader = ({ section: { title } }) => (
+        <Surface style={currentStyles.sectionHeader} elevation={0}>
+            <Text style={currentStyles.sectionHeaderText}>{title}</Text>
+        </Surface>
+    );
+
     const currentStyles = styles(theme);
 
     return (
@@ -92,15 +114,20 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                 style={currentStyles.searchBar}
                 iconColor={theme.colors.primary}
             />
-            <FlatList
-                data={filteredChannels}
-                keyExtractor={(item, index) => `${item.name}-${index}`}
-                renderItem={renderItem}
-                contentContainerStyle={currentStyles.listContent}
-                initialNumToRender={20}
-                maxToRenderPerBatch={20}
-                windowSize={10}
-            />
+            <React.Fragment>
+                {/* Using SectionList from react-native */}
+                <SectionList
+                    sections={sections}
+                    keyExtractor={(item, index) => `${item.name}-${index}`}
+                    renderItem={renderItem}
+                    renderSectionHeader={renderSectionHeader}
+                    contentContainerStyle={currentStyles.listContent}
+                    initialNumToRender={20}
+                    maxToRenderPerBatch={20}
+                    windowSize={10}
+                    stickySectionHeadersEnabled={true}
+                />
+            </React.Fragment>
         </View>
     );
 }
@@ -153,5 +180,17 @@ const styles = (theme) => StyleSheet.create({
     rightActions: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    sectionHeader: {
+        backgroundColor: theme.colors.background,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.outlineVariant,
+    },
+    sectionHeaderText: {
+        fontWeight: 'bold',
+        fontSize: 18,
+        color: theme.colors.primary,
     },
 });
