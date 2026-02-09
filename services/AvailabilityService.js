@@ -2,11 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 
-const CACHE_KEY = '@glazki_availability_cache_v4'; // Bump version
+const CACHE_KEY = '@glazki_availability_cache_v5'; // Bump version
 const CACHE_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_POOL_SIZE = 10;
 
-const CONCURRENCY = 10;
+const CONCURRENCY = 5;
 
 class AvailabilityService {
     constructor() {
@@ -165,14 +165,35 @@ class AvailabilityService {
             try {
                 if (Platform.OS === 'web') {
                     try {
-                        const response = await fetch(url, { method: 'HEAD' });
+                        const controller = new AbortController();
+                        const signal = controller.signal;
+
+                        // We use GET with no-store to force a fresh check and bypass cache.
+                        // We abort immediately after the promise resolves (headers received)
+                        // This tests if the server allows the request (CORS) and if the resource exists.
+                        const response = await fetch(url, {
+                            method: 'GET',
+                            cache: 'no-store',
+                            signal: signal
+                        });
+
+                        // If we got here, CORS is likely okay for GET.
+                        // Abort the body download
+                        controller.abort();
+
                         if (response.ok || response.status === 200) {
                             finish('online', null);
                         } else {
                             finish('offline', null);
                         }
                     } catch (e) {
-                        console.warn('[AvailabilityService] Web check failed for:', url, e);
+                        // AbortError is expected if we abort, but fetch usually throws it only if aborted *before* completion.
+                        // But here we await fetch, so if it throws, it's a network/CORS error.
+                        // However, if we abort *after* await fetch returns, that doesn't throw.
+                        // So this catch block catches actual fetch failures (network, CORS).
+                        if (e.name !== 'AbortError') {
+                            console.warn('[AvailabilityService] Web check failed for:', url, e);
+                        }
                         finish('offline', null);
                     }
                     return;
