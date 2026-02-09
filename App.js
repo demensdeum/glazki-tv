@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, SafeAreaView, ActivityIndicator, useColorScheme, Platform, FlatList, BackHandler } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, useColorScheme, Platform, FlatList, BackHandler } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   Provider as PaperProvider,
   MD3LightTheme,
@@ -118,8 +119,8 @@ export default function App() {
       return false;
     };
 
-    BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
   }, [selectedCountry]);
 
   const handleDeepLink = (initialUrl) => {
