@@ -11,7 +11,8 @@ const CONCURRENCY = 5;
 class AvailabilityService {
     constructor() {
         this.cache = new Map(); // url -> { status: 'unknown' | 'online' | 'offline', timestamp: number, snapshotUri: string | null }
-        this.pool = []; // Array of URLs to check
+        this.highPriority = []; // Viewable channels
+        this.lowPriority = []; // Background scan
         this.activeChecks = new Map(); // url -> cancelFunction
         this.listeners = new Set();
         this.isChecking = false;
@@ -71,35 +72,86 @@ class AvailabilityService {
     updateViewableChannels(channels) {
         if (!channels || channels.length === 0) return;
 
-        const newUrls = channels.map(c => c.url).filter(url => !!url);
+        let newUrls = channels.map(c => c.url).filter(url => !!url);
         if (newUrls.length === 0) return;
 
-        // Cancel active checks that are no longer viewable
+        // Limit to MAX_POOL_SIZE (most recent/visible ones)
+        // Usually viewableItems are in order, so slice the first N
+        if (newUrls.length > MAX_POOL_SIZE) {
+            newUrls = newUrls.slice(0, MAX_POOL_SIZE);
+        }
+
         const newUrlSet = new Set(newUrls);
+
+        // Cancel active checks that are NOT in the new viewable list
+        // This includes background scans (low priority) or old viewable items
         for (const [url, cancel] of this.activeChecks) {
             if (!newUrlSet.has(url)) {
-                console.log('[AvailabilityService] Cancelling active check for:', url);
+                // console.log('[AvailabilityService] Cancelling irrelevant check:', url);
                 cancel();
                 this.activeChecks.delete(url);
             }
         }
 
-        const uniqueNew = [...new Set(newUrls)];
         const now = Date.now();
 
         // Filter out URLs that are recently cached
-        const toCheck = uniqueNew.filter(url => {
+        const toCheck = newUrls.filter(url => {
             const cached = this.cache.get(url);
             if (!cached) return true;
             if (now - cached.timestamp > CACHE_TIMEOUT) return true;
             return false;
         });
 
-        // Update pool: replace with new viewable items that need checking
-        this.pool = toCheck.slice(0, MAX_POOL_SIZE);
+        // Add to high priority queue
+        // We replace highPriority to ensure it only matches current view
+        this.highPriority = [];
+        const uniqueToCheck = [...new Set(toCheck)];
 
-        if (this.pool.length > 0 && !this.isChecking) {
-            console.log('[AvailabilityService] Triggering pool process. Size:', this.pool.length);
+        for (const url of uniqueToCheck) {
+            this.highPriority.push(url);
+
+            // Remove from lowPriority if present (promoted to high)
+            const lowIdx = this.lowPriority.indexOf(url);
+            if (lowIdx !== -1) {
+                this.lowPriority.splice(lowIdx, 1);
+            }
+        }
+
+        if (this.highPriority.length > 0 && !this.isChecking) {
+            console.log('[AvailabilityService] Triggering high priority process. Size:', this.highPriority.length);
+            this.processPool();
+        }
+    }
+
+    scanAll(channels) {
+        if (!channels || channels.length === 0) return;
+        const allUrls = channels.map(c => c.url).filter(url => !!url);
+
+        const now = Date.now();
+        const toCheck = allUrls.filter(url => {
+            const cached = this.cache.get(url);
+            if (!cached) return true;
+            if (now - cached.timestamp > CACHE_TIMEOUT) return true;
+            return false;
+        });
+
+        const uniqueToCheck = [...new Set(toCheck)];
+
+        let addedCount = 0;
+        for (const url of uniqueToCheck) {
+            // Don't add if already in high priority or active
+            if (this.highPriority.includes(url) || this.activeChecks.has(url)) continue;
+
+            if (!this.lowPriority.includes(url)) {
+                this.lowPriority.push(url);
+                addedCount++;
+            }
+        }
+
+        console.log(`[AvailabilityService] Added ${addedCount} channels to background scan.`);
+
+        if (this.lowPriority.length > 0 && !this.isChecking) {
             this.processPool();
         }
     }
@@ -110,8 +162,19 @@ class AvailabilityService {
 
         const worker = async (id) => {
             console.log(`[AvailabilityService] Worker ${id} started`);
-            while (this.pool.length > 0) {
-                const url = this.pool.shift();
+
+            while (true) {
+                let url = null;
+
+                if (this.highPriority.length > 0) {
+                    url = this.highPriority.shift();
+                } else if (this.lowPriority.length > 0) {
+                    url = this.lowPriority.shift();
+                } else {
+                    break;
+                }
+
+                if (!url) break;
 
                 // Double check cache validity
                 const cached = this.cache.get(url);

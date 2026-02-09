@@ -7,16 +7,20 @@ import Constants from 'expo-constants';
 import i18n from '../utils/i18n';
 import AvailabilityService from '../services/AvailabilityService';
 
-export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite }) {
+export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite, onlyAvailable = false }) {
     const theme = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const [availabilityTrigger, setAvailabilityTrigger] = useState(0); // For forcing re-render on updates
 
     const onChangeSearch = (query) => setSearchQuery(query);
 
-    const filteredChannels = channels.filter((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredChannels = channels.filter((item) => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        if (!onlyAvailable) return matchesSearch;
+
+        const status = AvailabilityService.getStatus(item.url);
+        return matchesSearch && status === 'online';
+    });
 
     const isFavorite = (channelName) => favorites.includes(channelName);
 

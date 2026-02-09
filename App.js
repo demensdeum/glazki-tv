@@ -17,6 +17,7 @@ import Constants from 'expo-constants';
 import ChannelList from './components/ChannelList';
 import ChannelPlayer from './components/ChannelPlayer';
 import CountryListView from './components/CountryListView';
+import AvailabilityService from './services/AvailabilityService';
 import i18n from './utils/i18n';
 
 const FAVORITES_KEY = '@glazki_favorites';
@@ -59,6 +60,7 @@ export default function App() {
   const url = Linking.useURL();
   const [routes] = useState([
     { key: 'all', title: i18n.channels, focusedIcon: 'television-classic', unfocusedIcon: 'television' },
+    { key: 'available', title: i18n.available, focusedIcon: 'check-circle', unfocusedIcon: 'check-circle-outline' },
     { key: 'countries', title: i18n.countries || 'Countries', focusedIcon: 'earth', unfocusedIcon: 'earth' },
     { key: 'favorites', title: i18n.favorites, focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
   ]);
@@ -233,6 +235,7 @@ export default function App() {
       const result = parse(data);
       setChannels(result.items);
       setLoading(false);
+      AvailabilityService.scanAll(result.items);
     } catch (err) {
       console.error('Error fetching playlist:', err);
       setError(i18n.errorLoading);
@@ -260,6 +263,16 @@ export default function App() {
             onSelectChannel={(channel) => setSelectedChannel(channel)}
             favorites={favorites}
             onToggleFavorite={onToggleFavorite}
+          />
+        );
+      case 'available':
+        return (
+          <ChannelList
+            channels={channels}
+            onSelectChannel={(channel) => setSelectedChannel(channel)}
+            favorites={favorites}
+            onToggleFavorite={onToggleFavorite}
+            onlyAvailable={true}
           />
         );
       case 'countries':

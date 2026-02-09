@@ -15,6 +15,7 @@ const translations = {
         globalSubtitle: 'Global IPTV Player',
         shareMessage: 'Check out this TV channel: ',
         play: 'Play',
+        available: 'Available',
     },
     ru: {
         appName: 'Глазки ТВ',
@@ -30,6 +31,7 @@ const translations = {
         globalSubtitle: 'Глобальный IPTV плеер',
         shareMessage: 'Посмотри этот телеканал: ',
         play: 'Играть',
+        available: 'Доступные',
     },
 };
 
