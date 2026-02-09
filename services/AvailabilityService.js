@@ -1,21 +1,92 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import * as VideoThumbnails from 'expo-video-thumbnails';
+
+
 
 const CACHE_KEY = '@glazki_availability_cache_v5'; // Bump version
 const CACHE_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_POOL_SIZE = 10;
 
-const CONCURRENCY = 2;
+const CONCURRENCY = 5;
 
 class AvailabilityService {
     constructor() {
         this.cache = new Map(); // url -> { status: 'unknown' | 'online' | 'offline', timestamp: number, snapshotUri: string | null }
 
         this.highPriority = []; // Viewable channels (Queue)
-        this.activeChecks = new Map(); // url -> cancelFunction
+        this.activeChecks = new Map(); // url -> cancelFunction OR { id, worker } logic
         this.listeners = new Set();
         this.isChecking = false;
+
+        // Initialize Web Worker if on Web
+        if (Platform.OS === 'web') {
+            try {
+                // Inline worker to avoid MIME type issues with Metro/Expo Web
+                const workerCode = `
+/* eslint-disable no-restricted-globals */
+const activeRequests = new Map();
+
+self.onmessage = async (e) => {
+    const { id, url, type } = e.data;
+
+    if (type === 'cancel') {
+        const controller = activeRequests.get(id);
+        if (controller) {
+            controller.abort();
+            activeRequests.delete(id);
+        }
+        return;
+    }
+
+    if (type === 'check') {
+        const controller = new AbortController();
+        activeRequests.set(id, controller);
+        const signal = controller.signal;
+
+        try {
+            const response = await fetch(url, {
+                method: 'GET',
+                cache: 'no-store',
+                signal: signal
+            });
+
+            controller.abort();
+            activeRequests.delete(id);
+
+            if (response.ok || response.status === 200) {
+                self.postMessage({ id, status: 'online', url });
+            } else {
+                self.postMessage({ id, status: 'offline', url });
+            }
+        } catch (error) {
+            activeRequests.delete(id);
+            self.postMessage({ id, status: 'offline', url });
+        }
+    }
+};
+`;
+                const blob = new Blob([workerCode], { type: 'application/javascript' });
+                const workerUrl = URL.createObjectURL(blob);
+                console.log('[AvailabilityService] Loading inline worker');
+
+                this.worker = new Worker(workerUrl);
+
+                this.workerIds = new Map(); // id -> { resolve, url }
+                this.nextWorkerId = 1;
+
+                this.worker.onmessage = (e) => {
+                    const { id, status, snapshotUri } = e.data;
+                    const request = this.workerIds.get(id);
+                    if (request) {
+                        request.resolve({ status, snapshotUri });
+                        this.workerIds.delete(id);
+                    }
+                };
+            } catch (e) {
+                console.error('[AvailabilityService] Failed to initialize Web Worker', e);
+            }
+        }
+
         this.loadCache();
     }
 
@@ -189,50 +260,60 @@ class AvailabilityService {
 
             try {
                 if (Platform.OS === 'web') {
-                    try {
-                        const controller = new AbortController();
-                        const signal = controller.signal;
+                    if (this.worker) {
+                        const id = this.nextWorkerId++;
 
-                        // We use GET with no-store to force a fresh check and bypass cache.
-                        // We abort immediately after the promise resolves (headers received)
-                        // This tests if the server allows the request (CORS) and if the resource exists.
-                        const response = await fetch(url, {
-                            method: 'GET',
-                            cache: 'no-store',
-                            signal: signal
+                        // Store resolver to be called by onmessage
+                        this.workerIds.set(id, {
+                            resolve: (res) => {
+                                finish(res.status, res.snapshotUri);
+                            }, url
                         });
 
-                        // If we got here, CORS is likely okay for GET.
-                        // Abort the body download
-                        controller.abort();
+                        // Update cancel logic to send cancel message to worker
+                        this.activeChecks.set(url, () => {
+                            console.log(`[AvailabilityService] Aborting check for ${url} (Worker ID: ${id})`);
+                            this.worker.postMessage({ type: 'cancel', id, url });
+                            cancelled = true;
+                            this.workerIds.delete(id);
+                            resolve();
+                        });
 
-                        if (response.ok || response.status === 200) {
-                            finish('online', null);
-                        } else {
-                            finish('offline', null);
-                        }
-                    } catch (e) {
-                        // AbortError is expected if we abort, but fetch usually throws it only if aborted *before* completion.
-                        // But here we await fetch, so if it throws, it's a network/CORS error.
-                        // However, if we abort *after* await fetch returns, that doesn't throw.
-                        // So this catch block catches actual fetch failures (network, CORS).
-                        if (e.name !== 'AbortError') {
-                            console.warn('[AvailabilityService] Web check failed for:', url, e);
-                        }
+                        this.worker.postMessage({ type: 'check', id, url });
+                    } else {
+                        // Fallback if worker failed to init (or use main thread logic if preferred, 
+                        // but for now let's assume worker is required or just fail)
+                        console.warn('[AvailabilityService] Web Worker not available, skipping check');
                         finish('offline', null);
                     }
                     return;
                 }
 
-                // Use expo-video-thumbnails
-                // Note: time is in milliseconds
-                const { uri } = await VideoThumbnails.getThumbnailAsync(url, {
-                    time: 2000,
-                });
+                // Native check using fetch (simulated worker or direct async)
+                try {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
-                if (uri) {
-                    finish('online', uri);
-                } else {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        cache: 'no-store',
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(id);
+                    // Just check status, don't download body
+                    // (On native fetch, we might not be able to abort body download easily without a stream, 
+                    // but we can just ignore it)
+
+                    if (response.ok || response.status === 200) {
+                        finish('online', null);
+                    } else {
+                        finish('offline', null);
+                    }
+                } catch (e) {
+                    if (e.name !== 'AbortError') {
+                        // console.warn('[AvailabilityService] Native check failed:', url, e);
+                    }
                     finish('offline', null);
                 }
 
