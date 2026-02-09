@@ -235,7 +235,6 @@ export default function App() {
       const result = parse(data);
       setChannels(result.items);
       setLoading(false);
-      AvailabilityService.scanAll(result.items);
     } catch (err) {
       console.error('Error fetching playlist:', err);
       setError(i18n.errorLoading);

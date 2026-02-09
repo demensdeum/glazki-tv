@@ -11,8 +11,8 @@ const CONCURRENCY = 5;
 class AvailabilityService {
     constructor() {
         this.cache = new Map(); // url -> { status: 'unknown' | 'online' | 'offline', timestamp: number, snapshotUri: string | null }
-        this.highPriority = []; // Viewable channels
-        this.lowPriority = []; // Background scan
+
+        this.highPriority = []; // Viewable channels (Queue)
         this.activeChecks = new Map(); // url -> cancelFunction
         this.listeners = new Set();
         this.isChecking = false;
@@ -110,12 +110,6 @@ class AvailabilityService {
 
         for (const url of uniqueToCheck) {
             this.highPriority.push(url);
-
-            // Remove from lowPriority if present (promoted to high)
-            const lowIdx = this.lowPriority.indexOf(url);
-            if (lowIdx !== -1) {
-                this.lowPriority.splice(lowIdx, 1);
-            }
         }
 
         if (this.highPriority.length > 0 && !this.isChecking) {
@@ -124,37 +118,7 @@ class AvailabilityService {
         }
     }
 
-    scanAll(channels) {
-        if (!channels || channels.length === 0) return;
-        const allUrls = channels.map(c => c.url).filter(url => !!url);
 
-        const now = Date.now();
-        const toCheck = allUrls.filter(url => {
-            const cached = this.cache.get(url);
-            if (!cached) return true;
-            if (now - cached.timestamp > CACHE_TIMEOUT) return true;
-            return false;
-        });
-
-        const uniqueToCheck = [...new Set(toCheck)];
-
-        let addedCount = 0;
-        for (const url of uniqueToCheck) {
-            // Don't add if already in high priority or active
-            if (this.highPriority.includes(url) || this.activeChecks.has(url)) continue;
-
-            if (!this.lowPriority.includes(url)) {
-                this.lowPriority.push(url);
-                addedCount++;
-            }
-        }
-
-        console.log(`[AvailabilityService] Added ${addedCount} channels to background scan.`);
-
-        if (this.lowPriority.length > 0 && !this.isChecking) {
-            this.processPool();
-        }
-    }
 
     async processPool() {
         if (this.isChecking) return;
@@ -168,8 +132,6 @@ class AvailabilityService {
 
                 if (this.highPriority.length > 0) {
                     url = this.highPriority.shift();
-                } else if (this.lowPriority.length > 0) {
-                    url = this.lowPriority.shift();
                 } else {
                     break;
                 }
