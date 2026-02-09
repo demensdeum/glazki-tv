@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FlatList, SectionList, StyleSheet, View, Share } from 'react-native';
+import { FlatList, SectionList, StyleSheet, View, Share, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
 import * as Linking from 'expo-linking';
@@ -173,7 +173,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                     initialNumToRender={20}
                     maxToRenderPerBatch={20}
                     windowSize={10}
-                    stickySectionHeadersEnabled={true}
+                    stickySectionHeadersEnabled={Platform.OS !== 'android'}
                     onViewableItemsChanged={onViewableItemsChanged}
                     viewabilityConfig={viewabilityConfig}
                     extraData={availabilityTrigger} // Force re-render when status updates
