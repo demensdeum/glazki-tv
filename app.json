@@ -32,6 +32,11 @@
     ],
     "experiments": {
       "baseUrl": "/software/glazki-tv"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3e5087e4-0e8c-4555-9e2e-0a20e0028e8c"
+      }
     }
   }
 }
