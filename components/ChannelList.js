@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { FlatList, SectionList, StyleSheet, View, Image, Share } from 'react-native';
+import { FlatList, SectionList, StyleSheet, View, Share } from 'react-native';
+import { Image } from 'expo-image';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
@@ -62,7 +63,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
     };
 
     const renderItem = ({ item }) => {
-        const status = AvailabilityService.getStatus(item.url);
+        const { status, snapshotUri } = AvailabilityService.getDetails(item.url) || { status: AvailabilityService.getStatus(item.url) };
         const statusColor = status === 'online' ? 'green' : 'gray';
 
         return (
@@ -72,11 +73,17 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                     description={item.group?.title || i18n.unknownCategory}
                     left={(props) => (
                         <View style={currentStyles.logoContainer}>
-                            {item.tvg?.logo ? (
+                            {snapshotUri ? (
+                                <Image
+                                    source={{ uri: snapshotUri }}
+                                    style={currentStyles.snapshot}
+                                    contentFit="cover"
+                                />
+                            ) : item.tvg?.logo ? (
                                 <Image
                                     source={{ uri: item.tvg.logo }}
                                     style={currentStyles.logo}
-                                    resizeMode="contain"
+                                    contentFit="contain"
                                 />
                             ) : (
                                 <List.Icon {...props} icon="television-play" color={theme.colors.primary} />
@@ -193,6 +200,11 @@ const styles = (theme) => StyleSheet.create({
     logo: {
         width: 44,
         height: 44,
+        borderRadius: 4,
+    },
+    snapshot: {
+        width: 48,
+        height: 27, // 16:9 aspect ratio roughly
         borderRadius: 4,
     },
     title: {

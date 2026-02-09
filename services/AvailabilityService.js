@@ -1,13 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import * as VideoThumbnails from 'expo-video-thumbnails';
 
-const CACHE_KEY = '@glazki_availability_cache';
+const CACHE_KEY = '@glazki_availability_cache_v4'; // Bump version
 const CACHE_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
-const MAX_POOL_SIZE = 30;
+const MAX_POOL_SIZE = 10;
+
+const CONCURRENCY = 10;
 
 class AvailabilityService {
     constructor() {
-        this.cache = new Map(); // url -> { status: 'unknown' | 'online', timestamp: number }
+        this.cache = new Map(); // url -> { status: 'unknown' | 'online' | 'offline', timestamp: number, snapshotUri: string | null }
         this.pool = []; // Array of URLs to check
+        this.activeChecks = new Map(); // url -> cancelFunction
         this.listeners = new Set();
         this.isChecking = false;
         this.loadCache();
@@ -55,11 +60,29 @@ class AvailabilityService {
         return this.cache.get(url)?.status || 'unknown';
     }
 
+    getDetails(url) {
+        return this.cache.get(url);
+    }
+
+    getSnapshot(url) {
+        return this.cache.get(url)?.snapshotUri || null;
+    }
+
     updateViewableChannels(channels) {
         if (!channels || channels.length === 0) return;
 
         const newUrls = channels.map(c => c.url).filter(url => !!url);
         if (newUrls.length === 0) return;
+
+        // Cancel active checks that are no longer viewable
+        const newUrlSet = new Set(newUrls);
+        for (const [url, cancel] of this.activeChecks) {
+            if (!newUrlSet.has(url)) {
+                console.log('[AvailabilityService] Cancelling active check for:', url);
+                cancel();
+                this.activeChecks.delete(url);
+            }
+        }
 
         const uniqueNew = [...new Set(newUrls)];
         const now = Date.now();
@@ -75,7 +98,8 @@ class AvailabilityService {
         // Update pool: replace with new viewable items that need checking
         this.pool = toCheck.slice(0, MAX_POOL_SIZE);
 
-        if (this.pool.length > 0) {
+        if (this.pool.length > 0 && !this.isChecking) {
+            console.log('[AvailabilityService] Triggering pool process. Size:', this.pool.length);
             this.processPool();
         }
     }
@@ -84,45 +108,94 @@ class AvailabilityService {
         if (this.isChecking) return;
         this.isChecking = true;
 
-        try {
+        const worker = async (id) => {
+            console.log(`[AvailabilityService] Worker ${id} started`);
             while (this.pool.length > 0) {
                 const url = this.pool.shift();
 
-                // Double check cache validity before network call
+                // Double check cache validity
                 const cached = this.cache.get(url);
                 if (cached && Date.now() - cached.timestamp < CACHE_TIMEOUT) {
                     continue;
                 }
 
-                await this.checkUrl(url);
+                // Wait for check to complete
+                await this.performCheck(url);
                 this.notify();
             }
+            console.log(`[AvailabilityService] Worker ${id} finished`);
+        };
+
+        try {
+            const workers = [];
+            for (let i = 0; i < CONCURRENCY; i++) {
+                workers.push(worker(i));
+            }
+            await Promise.all(workers);
         } finally {
             this.isChecking = false;
             this.saveCache();
         }
     }
 
-    async checkUrl(url) {
-        try {
-            const controller = new AbortController();
-            const id = setTimeout(() => controller.abort(), 5000); // 5s timeout for check
+    performCheck(url) {
+        return new Promise(async (resolve) => {
+            console.log('[AvailabilityService] performing check for:', url);
+            let cancelled = false;
 
-            const response = await fetch(url, {
-                method: 'HEAD',
-                signal: controller.signal
+            const finish = (status, snapshotUri) => {
+                if (cancelled) return;
+                console.log(`[AvailabilityService] Finished ${url}: ${status} `);
+                this.cache.set(url, {
+                    status: status,
+                    snapshotUri: snapshotUri,
+                    timestamp: Date.now()
+                });
+                this.activeChecks.delete(url);
+                resolve();
+            };
+
+            // Register cancellation
+            this.activeChecks.set(url, () => {
+                console.log(`[AvailabilityService] Aborting check for ${url}`);
+                cancelled = true;
+                resolve(); // Free the worker without saving result
             });
-            clearTimeout(id);
 
-            if (response.ok) {
-                this.cache.set(url, { status: 'online', timestamp: Date.now() });
-            } else {
-                // If HEAD fails, we could try GET with range, but for now mark as unknown/offline
-                this.cache.set(url, { status: 'unknown', timestamp: Date.now() });
+            try {
+                if (Platform.OS === 'web') {
+                    try {
+                        const response = await fetch(url, { method: 'HEAD' });
+                        if (response.ok || response.status === 200) {
+                            finish('online', null);
+                        } else {
+                            finish('offline', null);
+                        }
+                    } catch (e) {
+                        console.warn('[AvailabilityService] Web check failed for:', url, e);
+                        finish('offline', null);
+                    }
+                    return;
+                }
+
+                // Use expo-video-thumbnails
+                // Note: time is in milliseconds
+                const { uri } = await VideoThumbnails.getThumbnailAsync(url, {
+                    time: 2000,
+                });
+
+                if (uri) {
+                    finish('online', uri);
+                } else {
+                    finish('offline', null);
+                }
+
+            } catch (e) {
+                console.warn('[AvailabilityService] Thumbnail generation failed for:', url, e);
+                // If thumbnail failed, it might be offline or just not supported.
+                finish('offline', null);
             }
-        } catch (e) {
-            this.cache.set(url, { status: 'unknown', timestamp: Date.now() });
-        }
+        });
     }
 }
 
