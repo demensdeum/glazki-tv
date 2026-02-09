@@ -6,7 +6,7 @@ const CACHE_KEY = '@glazki_availability_cache_v5'; // Bump version
 const CACHE_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_POOL_SIZE = 10;
 
-const CONCURRENCY = 5;
+const CONCURRENCY = 2;
 
 class AvailabilityService {
     constructor() {

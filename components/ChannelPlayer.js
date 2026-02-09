@@ -109,6 +109,7 @@ export default function ChannelPlayer({ channel, onClose }) {
               onPress={handleStart}
               contentStyle={styles.playButtonContent}
               labelStyle={styles.playButtonLabel}
+              style={{ marginTop: 300 }}
             >
               {i18n.play}
             </Button>
