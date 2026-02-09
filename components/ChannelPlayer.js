@@ -11,7 +11,12 @@ export default function ChannelPlayer({ channel, onClose }) {
   const [hasStarted, setHasStarted] = useState(false);
   const hideTimer = useRef(null);
 
-  const player = useVideoPlayer(hasStarted ? channel.url : null, (player) => {
+  const isWebSecure = Platform.OS === 'web' && typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const isHttpStream = channel.url.startsWith('http:');
+  // Try to upgrade to HTTPS if we are on a secure page and the stream is HTTP
+  const videoUrl = (isWebSecure && isHttpStream) ? channel.url.replace(/^http:/, 'https:') : channel.url;
+
+  const player = useVideoPlayer(hasStarted ? videoUrl : null, (player) => {
     player.loop = false;
     if (hasStarted) {
       player.play();
@@ -31,7 +36,11 @@ export default function ChannelPlayer({ channel, onClose }) {
     // @ts-ignore - error event exists in expo-video
     const errorSub = player.addListener('error', (error) => {
       console.error('Video error:', error);
-      setVideoError(error.message || 'Unknown error');
+      let errorMsg = error.message || 'Unknown error';
+      if (isWebSecure && isHttpStream) {
+        errorMsg = i18n.mixedContentError;
+      }
+      setVideoError(errorMsg);
     });
     return () => {
       playingSub.remove();

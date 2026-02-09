@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { FlatList, SectionList, StyleSheet, View, Image, Share } from 'react-native';
 import { List, Searchbar, Divider, Text, Surface, useTheme, IconButton } from 'react-native-paper';
 import * as Linking from 'expo-linking';
 import Constants from 'expo-constants';
 import i18n from '../utils/i18n';
+import AvailabilityService from '../services/AvailabilityService';
 
 export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite }) {
     const theme = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
+    const [availabilityTrigger, setAvailabilityTrigger] = useState(0); // For forcing re-render on updates
 
     const onChangeSearch = (query) => setSearchQuery(query);
 
@@ -16,6 +18,25 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
     );
 
     const isFavorite = (channelName) => favorites.includes(channelName);
+
+    useEffect(() => {
+        const unsubscribe = AvailabilityService.subscribe(() => {
+            setAvailabilityTrigger(prev => prev + 1);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const onViewableItemsChanged = useCallback(({ viewableItems }) => {
+        const items = viewableItems.map(item => item.item);
+        // SectionList passes section headers too, filter them out
+        const channels = items.filter(item => item && item.url);
+        AvailabilityService.updateViewableChannels(channels);
+    }, []);
+
+    const viewabilityConfig = useRef({
+        itemVisiblePercentThreshold: 50,
+        minimumViewTime: 300,
+    }).current;
 
     const onShare = async (channel) => {
         try {
@@ -40,46 +61,52 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
         }
     };
 
-    const renderItem = ({ item }) => (
-        <Surface style={currentStyles.itemContainer}>
-            <List.Item
-                title={item.name}
-                description={item.group?.title || i18n.unknownCategory}
-                left={(props) => (
-                    <View style={currentStyles.logoContainer}>
-                        {item.tvg?.logo ? (
-                            <Image
-                                source={{ uri: item.tvg.logo }}
-                                style={currentStyles.logo}
-                                resizeMode="contain"
+    const renderItem = ({ item }) => {
+        const status = AvailabilityService.getStatus(item.url);
+        const statusColor = status === 'online' ? 'green' : 'gray';
+
+        return (
+            <Surface style={currentStyles.itemContainer}>
+                <List.Item
+                    title={item.name}
+                    description={item.group?.title || i18n.unknownCategory}
+                    left={(props) => (
+                        <View style={currentStyles.logoContainer}>
+                            {item.tvg?.logo ? (
+                                <Image
+                                    source={{ uri: item.tvg.logo }}
+                                    style={currentStyles.logo}
+                                    resizeMode="contain"
+                                />
+                            ) : (
+                                <List.Icon {...props} icon="television-play" color={theme.colors.primary} />
+                            )}
+                        </View>
+                    )}
+                    right={(props) => (
+                        <View style={currentStyles.rightActions}>
+                            <View style={[currentStyles.statusIndicator, { backgroundColor: statusColor }]} />
+                            <IconButton
+                                {...props}
+                                icon="share-variant"
+                                iconColor={theme.colors.outline}
+                                onPress={() => onShare(item)}
                             />
-                        ) : (
-                            <List.Icon {...props} icon="television-play" color={theme.colors.primary} />
-                        )}
-                    </View>
-                )}
-                right={(props) => (
-                    <View style={currentStyles.rightActions}>
-                        <IconButton
-                            {...props}
-                            icon="share-variant"
-                            iconColor={theme.colors.outline}
-                            onPress={() => onShare(item)}
-                        />
-                        <IconButton
-                            {...props}
-                            icon={isFavorite(item.name) ? "heart" : "heart-outline"}
-                            iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
-                            onPress={() => onToggleFavorite(item.name)}
-                        />
-                    </View>
-                )}
-                onPress={() => onSelectChannel(item)}
-                titleStyle={currentStyles.title}
-                descriptionStyle={currentStyles.description}
-            />
-        </Surface>
-    );
+                            <IconButton
+                                {...props}
+                                icon={isFavorite(item.name) ? "heart" : "heart-outline"}
+                                iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
+                                onPress={() => onToggleFavorite(item.name)}
+                            />
+                        </View>
+                    )}
+                    onPress={() => onSelectChannel(item)}
+                    titleStyle={currentStyles.title}
+                    descriptionStyle={currentStyles.description}
+                />
+            </Surface>
+        );
+    };
 
     const sections = React.useMemo(() => {
         const groups = {};
@@ -126,6 +153,9 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                     maxToRenderPerBatch={20}
                     windowSize={10}
                     stickySectionHeadersEnabled={true}
+                    onViewableItemsChanged={onViewableItemsChanged}
+                    viewabilityConfig={viewabilityConfig}
+                    extraData={availabilityTrigger} // Force re-render when status updates
                 />
             </React.Fragment>
         </View>
@@ -180,6 +210,12 @@ const styles = (theme) => StyleSheet.create({
     rightActions: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    statusIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        marginRight: 8,
     },
     sectionHeader: {
         backgroundColor: theme.colors.background,
