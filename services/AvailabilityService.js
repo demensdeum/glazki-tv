@@ -7,7 +7,8 @@ const CACHE_KEY = '@glazki_availability_cache_v5'; // Bump version
 const CACHE_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_POOL_SIZE = 10;
 
-const CONCURRENCY = 5;
+const CONCURRENCY = 2;
+const CHECK_TIMEOUT = 5000;
 
 class AvailabilityService {
     constructor() {
@@ -42,6 +43,7 @@ self.onmessage = async (e) => {
         const controller = new AbortController();
         activeRequests.set(id, controller);
         const signal = controller.signal;
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
             const response = await fetch(url, {
@@ -53,12 +55,14 @@ self.onmessage = async (e) => {
             controller.abort();
             activeRequests.delete(id);
 
+            clearTimeout(timeoutId);
             if (response.ok || response.status === 200) {
                 self.postMessage({ id, status: 'online', url });
             } else {
                 self.postMessage({ id, status: 'offline', url });
             }
         } catch (error) {
+            clearTimeout(timeoutId);
             activeRequests.delete(id);
             self.postMessage({ id, status: 'offline', url });
         }
@@ -292,7 +296,7 @@ self.onmessage = async (e) => {
                 // Native check using fetch (simulated worker or direct async)
                 try {
                     const controller = new AbortController();
-                    const id = setTimeout(() => controller.abort(), 5000); // 5s timeout
+                    const id = setTimeout(() => controller.abort(), CHECK_TIMEOUT);
 
                     const response = await fetch(url, {
                         method: 'GET',
