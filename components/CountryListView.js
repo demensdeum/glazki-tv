@@ -8,9 +8,15 @@ export default function CountryListView({ countries, onSelect, theme }) {
 
     const onChangeSearch = (query) => setSearchQuery(query);
 
-    const filteredCountries = countries.filter((country) =>
-        country.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const getCountryName = (originalName) => {
+        return i18n.countryNames?.[originalName] || originalName;
+    };
+
+    const filteredCountries = countries.filter((country) => {
+        const translated = getCountryName(country);
+        const query = searchQuery.toLowerCase();
+        return country.toLowerCase().includes(query) || translated.toLowerCase().includes(query);
+    });
 
     return (
         <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -26,7 +32,7 @@ export default function CountryListView({ countries, onSelect, theme }) {
                 keyExtractor={(item) => item}
                 renderItem={({ item }) => (
                     <List.Item
-                        title={item}
+                        title={getCountryName(item)}
                         left={(props) => <List.Icon {...props} icon="folder" color={theme.colors.primary} />}
                         onPress={() => onSelect(item)}
                         style={{

@@ -59,7 +59,7 @@ export default function App() {
   const [index, setIndex] = useState(0);
   const url = Linking.useURL();
   const [routes] = useState([
-    { key: 'all', title: i18n.channels, focusedIcon: 'television-classic', unfocusedIcon: 'television' },
+    { key: 'all', title: i18n.channels, focusedIcon: 'television', unfocusedIcon: 'television' },
     { key: 'available', title: i18n.available, focusedIcon: 'check-circle', unfocusedIcon: 'check-circle-outline' },
     { key: 'countries', title: i18n.countries || 'Countries', focusedIcon: 'earth', unfocusedIcon: 'earth' },
     { key: 'favorites', title: i18n.favorites, focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
