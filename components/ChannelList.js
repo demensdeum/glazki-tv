@@ -64,7 +64,17 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
 
     const renderItem = ({ item }) => {
         const { status, snapshotUri } = AvailabilityService.getDetails(item.url) || { status: AvailabilityService.getStatus(item.url) };
-        const statusColor = status === 'online' ? 'green' : 'gray';
+        let statusColor;
+        switch (status) {
+            case 'online':
+                statusColor = '#4CAF50'; // Green
+                break;
+            case 'offline':
+                statusColor = '#F44336'; // Red
+                break;
+            default:
+                statusColor = '#FFC107'; // Yellow (Unknown)
+        }
 
         return (
             <Surface style={currentStyles.itemContainer}>
