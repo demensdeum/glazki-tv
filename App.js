@@ -329,7 +329,7 @@ export default function App() {
 
   return (
     <PaperProvider theme={theme}>
-      <SafeAreaView style={currentStyles.container}>
+      <View style={currentStyles.container}>
         <Appbar.Header elevation={0}>
           <Appbar.Content
             title={i18n.appName}
@@ -364,7 +364,7 @@ export default function App() {
             onClose={() => setSelectedChannel(null)}
           />
         )}
-      </SafeAreaView>
+      </View>
     </PaperProvider>
   );
 }
