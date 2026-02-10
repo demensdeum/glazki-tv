@@ -14,17 +14,24 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
 
     const onChangeSearch = (query) => setSearchQuery(query);
 
-    const filteredChannels = channels.filter((item) => {
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        if (!onlyAvailable) return matchesSearch;
+    const filteredChannels = React.useMemo(() => {
+        const startFilter = performance.now();
+        const result = channels.filter((item) => {
+            const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+            if (!onlyAvailable) return matchesSearch;
 
-        const status = AvailabilityService.getStatus(item.url);
-        return matchesSearch && status === 'online';
-    });
+            const status = AvailabilityService.getStatus(item.url);
+            return matchesSearch && status === 'online';
+        });
+        const endFilter = performance.now();
+        console.log(`[Performance] Filtered ${channels.length} channels to ${result.length} in ${(endFilter - startFilter).toFixed(2)}ms`);
+        return result;
+    }, [channels, searchQuery, onlyAvailable, availabilityTrigger]);
 
-    const isFavorite = (channelName) => favorites.includes(channelName);
+    const isFavorite = React.useCallback((channelName) => favorites.includes(channelName), [favorites]);
 
     useEffect(() => {
+        console.log('[Performance] ChannelList mounted/updated');
         const unsubscribe = AvailabilityService.subscribe(() => {
             setAvailabilityTrigger(prev => prev + 1);
         });
@@ -132,6 +139,7 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
     };
 
     const sections = React.useMemo(() => {
+        const startTime = performance.now();
         const groups = {};
         filteredChannels.forEach(channel => {
             const groupName = channel.group?.title || i18n.unknownCategory;
@@ -141,10 +149,15 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
             groups[groupName].push(channel);
         });
 
-        return Object.keys(groups).sort().map(groupName => ({
+        const result = Object.keys(groups).sort().map(groupName => ({
             title: groupName,
             data: groups[groupName],
         }));
+
+        const endTime = performance.now();
+        console.log(`[Performance] ChannelList sections computed in ${(endTime - startTime).toFixed(2)}ms (${result.length} sections, ${filteredChannels.length} channels)`);
+
+        return result;
     }, [filteredChannels]);
 
     const renderSectionHeader = ({ section: { title } }) => (

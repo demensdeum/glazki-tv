@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, ActivityIndicator, useColorScheme, Platform, FlatList, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -66,6 +66,10 @@ export default function App() {
     { key: 'favorites', title: i18n.favorites, focusedIcon: 'heart', unfocusedIcon: 'heart-outline' },
   ]);
 
+  // Performance benchmarking
+  const tabSwitchStartTime = useRef(null);
+  const previousIndex = useRef(index);
+
   useEffect(() => {
     fetchPlaylist();
     fetchCountryPlaylist();
@@ -122,6 +126,26 @@ export default function App() {
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
   }, [selectedCountry]);
+
+  // Measure tab switch performance
+  useEffect(() => {
+    if (previousIndex.current !== index) {
+      const startTime = performance.now();
+      tabSwitchStartTime.current = startTime;
+      console.log(`[Performance] Tab switch started: ${routes[previousIndex.current]?.title} → ${routes[index]?.title} at ${startTime.toFixed(2)}ms`);
+
+      previousIndex.current = index;
+
+      // Measure after render completes
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+          console.log(`[Performance] Tab switch completed: ${routes[index]?.title} in ${duration.toFixed(2)}ms`);
+        });
+      });
+    }
+  }, [index, routes]);
 
   const handleDeepLink = (initialUrl) => {
     if (!initialUrl) return;
@@ -255,6 +279,12 @@ export default function App() {
   };
 
   const renderScene = ({ route }) => {
+    // Only render the active scene to avoid rendering all 4 tabs on every switch
+    if (routes[index].key !== route.key) {
+      return null;
+    }
+
+    console.log(`[Performance] Rendering scene: ${route.title}`);
     switch (route.key) {
       case 'all':
         return (
