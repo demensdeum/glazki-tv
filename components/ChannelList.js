@@ -82,49 +82,51 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
 
         return (
             <Surface style={currentStyles.itemContainer}>
-                <List.Item
-                    title={item.name}
-                    description={item.group?.title || i18n.unknownCategory}
-                    left={(props) => (
-                        <View style={currentStyles.logoContainer}>
-                            {snapshotUri ? (
-                                <Image
-                                    source={{ uri: snapshotUri }}
-                                    style={currentStyles.snapshot}
-                                    contentFit="cover"
+                <View style={currentStyles.itemInner}>
+                    <List.Item
+                        title={item.name}
+                        description={item.group?.title || i18n.unknownCategory}
+                        left={(props) => (
+                            <View style={currentStyles.logoContainer}>
+                                {snapshotUri ? (
+                                    <Image
+                                        source={{ uri: snapshotUri }}
+                                        style={currentStyles.snapshot}
+                                        contentFit="cover"
+                                    />
+                                ) : item.tvg?.logo ? (
+                                    <Image
+                                        source={{ uri: item.tvg.logo }}
+                                        style={currentStyles.logo}
+                                        contentFit="contain"
+                                    />
+                                ) : (
+                                    <List.Icon {...props} icon="television-play" color={theme.colors.primary} />
+                                )}
+                            </View>
+                        )}
+                        right={(props) => (
+                            <View style={currentStyles.rightActions}>
+                                <View style={[currentStyles.statusIndicator, { backgroundColor: statusColor }]} />
+                                <IconButton
+                                    {...props}
+                                    icon="share-variant"
+                                    iconColor={theme.colors.outline}
+                                    onPress={() => onShare(item)}
                                 />
-                            ) : item.tvg?.logo ? (
-                                <Image
-                                    source={{ uri: item.tvg.logo }}
-                                    style={currentStyles.logo}
-                                    contentFit="contain"
+                                <IconButton
+                                    {...props}
+                                    icon={isFavorite(item.name) ? "heart" : "heart-outline"}
+                                    iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
+                                    onPress={() => onToggleFavorite(item.name)}
                                 />
-                            ) : (
-                                <List.Icon {...props} icon="television-play" color={theme.colors.primary} />
-                            )}
-                        </View>
-                    )}
-                    right={(props) => (
-                        <View style={currentStyles.rightActions}>
-                            <View style={[currentStyles.statusIndicator, { backgroundColor: statusColor }]} />
-                            <IconButton
-                                {...props}
-                                icon="share-variant"
-                                iconColor={theme.colors.outline}
-                                onPress={() => onShare(item)}
-                            />
-                            <IconButton
-                                {...props}
-                                icon={isFavorite(item.name) ? "heart" : "heart-outline"}
-                                iconColor={isFavorite(item.name) ? theme.colors.primary : theme.colors.outline}
-                                onPress={() => onToggleFavorite(item.name)}
-                            />
-                        </View>
-                    )}
-                    onPress={() => onSelectChannel(item)}
-                    titleStyle={currentStyles.title}
-                    descriptionStyle={currentStyles.description}
-                />
+                            </View>
+                        )}
+                        onPress={() => onSelectChannel(item)}
+                        titleStyle={currentStyles.title}
+                        descriptionStyle={currentStyles.description}
+                    />
+                </View>
             </Surface>
         );
     };
@@ -200,6 +202,10 @@ const styles = (theme) => StyleSheet.create({
         marginVertical: 6,
         borderRadius: 12,
         backgroundColor: theme.colors.surface,
+        // overflow: 'hidden', // Removed to display shadow correctly
+    },
+    itemInner: {
+        borderRadius: 12,
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: theme.colors.outlineVariant,
