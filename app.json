@@ -20,7 +20,24 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.demensdeum.glazkitv"
+      "package": "com.demensdeum.glazkitv",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "demensdeum.com",
+              "pathPrefix": "/software/glazki-tv"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "scheme": "glazki-tv",
     "web": {
