@@ -3,6 +3,7 @@ import { View, StyleSheet, Dimensions, Pressable, Platform, Image, Text } from '
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { IconButton, Button } from 'react-native-paper';
 import i18n from '../utils/i18n';
+import ShareUtils from '../utils/share';
 
 export default function ChannelPlayer({ channel, onClose }) {
   const [showControls, setShowControls] = useState(false);
@@ -138,13 +139,22 @@ export default function ChannelPlayer({ channel, onClose }) {
         )}
 
         {showControls && (
-          <IconButton
-            icon="close"
-            size={30}
-            iconColor="white"
-            style={styles.closeButton}
-            onPress={onClose}
-          />
+          <>
+            <IconButton
+              icon="share-variant"
+              size={30}
+              iconColor="white"
+              style={styles.shareButton}
+              onPress={() => ShareUtils.onShare(channel)}
+            />
+            <IconButton
+              icon="close"
+              size={30}
+              iconColor="white"
+              style={styles.closeButton}
+              onPress={onClose}
+            />
+          </>
         )}
       </View>
     </Pressable>
@@ -186,6 +196,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     right: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  shareButton: {
+    position: 'absolute',
+    top: 40,
+    left: 20,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   playOverlay: {
