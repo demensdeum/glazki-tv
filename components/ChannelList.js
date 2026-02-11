@@ -8,7 +8,7 @@ import i18n from '../utils/i18n';
 import AvailabilityService from '../services/AvailabilityService';
 import ShareUtils from '../utils/share';
 
-export default function ChannelList({ channels, onSelectChannel, favorites, onToggleFavorite, onlyAvailable = false }) {
+export default function ChannelList({ channels, onSelectChannel, selectedChannel, lastSelectedUrl, favorites, onToggleFavorite, onlyAvailable = false }) {
     const theme = useTheme();
     const [searchQuery, setSearchQuery] = useState('');
     const [availabilityTrigger, setAvailabilityTrigger] = useState(0); // For forcing re-render on updates
@@ -69,8 +69,14 @@ export default function ChannelList({ channels, onSelectChannel, favorites, onTo
                 statusColor = '#FFC107'; // Yellow (Unknown)
         }
 
+        const isSelected = (selectedChannel && selectedChannel.url === item.url) || (lastSelectedUrl === item.url);
+        const itemContainerStyle = [
+            currentStyles.itemContainer,
+            isSelected && { backgroundColor: theme.dark ? '#333333' : '#f5f5f5' }
+        ];
+
         return (
-            <Surface style={currentStyles.itemContainer}>
+            <Surface style={itemContainerStyle}>
                 <View style={currentStyles.itemInner}>
                     <List.Item
                         title={item.name}

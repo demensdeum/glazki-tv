@@ -56,6 +56,7 @@ export default function App() {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastSelectedUrl, setLastSelectedUrl] = useState(null);
 
   const [index, setIndex] = useState(0);
   const url = Linking.useURL();
@@ -290,7 +291,12 @@ export default function App() {
         return (
           <ChannelList
             channels={channels}
-            onSelectChannel={(channel) => setSelectedChannel(channel)}
+            onSelectChannel={(channel) => {
+              setSelectedChannel(channel);
+              setLastSelectedUrl(channel.url);
+            }}
+            selectedChannel={selectedChannel}
+            lastSelectedUrl={lastSelectedUrl}
             favorites={favorites}
             onToggleFavorite={onToggleFavorite}
           />
@@ -299,7 +305,12 @@ export default function App() {
         return (
           <ChannelList
             channels={channels}
-            onSelectChannel={(channel) => setSelectedChannel(channel)}
+            onSelectChannel={(channel) => {
+              setSelectedChannel(channel);
+              setLastSelectedUrl(channel.url);
+            }}
+            selectedChannel={selectedChannel}
+            lastSelectedUrl={lastSelectedUrl}
             favorites={favorites}
             onToggleFavorite={onToggleFavorite}
             onlyAvailable={true}
@@ -317,7 +328,12 @@ export default function App() {
               </Appbar.Header>
               <ChannelList
                 channels={filtered}
-                onSelectChannel={(channel) => setSelectedChannel(channel)}
+                onSelectChannel={(channel) => {
+                  setSelectedChannel(channel);
+                  setLastSelectedUrl(channel.url);
+                }}
+                selectedChannel={selectedChannel}
+                lastSelectedUrl={lastSelectedUrl}
                 favorites={favorites}
                 onToggleFavorite={onToggleFavorite}
               />
@@ -345,7 +361,12 @@ export default function App() {
         return (
           <ChannelList
             channels={channels.filter(c => favorites.includes(c.name))}
-            onSelectChannel={(channel) => setSelectedChannel(channel)}
+            onSelectChannel={(channel) => {
+              setSelectedChannel(channel);
+              setLastSelectedUrl(channel.url);
+            }}
+            selectedChannel={selectedChannel}
+            lastSelectedUrl={lastSelectedUrl}
             favorites={favorites}
             onToggleFavorite={onToggleFavorite}
           />
