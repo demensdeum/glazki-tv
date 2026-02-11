@@ -138,15 +138,17 @@ export default function ChannelPlayer({ channel, onClose }) {
           </View>
         )}
 
-        {showControls && (
+        {(showControls || !hasStarted) && (
           <>
-            <IconButton
-              icon="share-variant"
-              size={30}
-              iconColor="white"
-              style={styles.shareButton}
-              onPress={() => ShareUtils.onShare(channel)}
-            />
+            {showControls && (
+              <IconButton
+                icon="share-variant"
+                size={30}
+                iconColor="white"
+                style={styles.shareButton}
+                onPress={() => ShareUtils.onShare(channel)}
+              />
+            )}
             <IconButton
               icon="close"
               size={30}
