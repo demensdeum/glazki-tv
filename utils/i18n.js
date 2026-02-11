@@ -14,6 +14,7 @@ const translations = {
         mixedContentError: 'Unable to play insecure (HTTP) stream on secure (HTTPS) website.',
         globalSubtitle: 'Global IPTV Player',
         shareMessage: 'Check out this TV channel: ',
+        shareTitle: 'Share channel',
         play: 'Play',
         available: 'Available',
         countryNames: {},
@@ -31,6 +32,7 @@ const translations = {
         mixedContentError: 'Невозможно воспроизвести небезопасный (HTTP) поток на безопасном (HTTPS) сайте.',
         globalSubtitle: 'Глобальный IPTV плеер',
         shareMessage: 'Посмотри этот телеканал: ',
+        shareTitle: 'Поделиться каналом',
         play: 'Играть',
         available: 'Доступные',
         countryNames: {

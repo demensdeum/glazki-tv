@@ -22,6 +22,7 @@
       "edgeToEdgeEnabled": true,
       "package": "com.demensdeum.glazkitv"
     },
+    "scheme": "glazki-tv",
     "web": {
       "favicon": "./assets/favicon.png"
     },
