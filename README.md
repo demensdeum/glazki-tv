@@ -4,6 +4,11 @@ A modern, high-performance Internet TV player built with **React Native** and **
 
 Online Player: https://demensdeum.com/software/glazki-tv/. 
 
+## Availability
+
+- **Web Version**: [Available online](https://demensdeum.com/software/glazki-tv/)
+- **Google Play Version**: Avaiable at the [Google Play](https://play.google.com/store/apps/details?id=com.demensdeum.glazkitv)
+
 ## Features
 
 - 📺 **Channel Browsing**: Browse thousands of channels categorized by group.
